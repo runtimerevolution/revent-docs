@@ -1,0 +1,174 @@
+## How to create the project
+
+Install the following:
+
+[nvm](https://github.com/nvm-sh/nvm)
+
+```shell
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+```
+
+[next.js](https://nextjs.org/docs)
+
+```shell
+npx create-next-app@latest
+```
+
+[jotai](https://jotai.org/docs/introduction)
+
+```shell
+npm install jotai
+```
+
+[react-hook-form](https://react-hook-form.com/get-started)
+
+```shell
+npm install react-hook-form
+```
+
+[react-query](https://react-query.tanstack.com/installation)
+
+```shell
+npm i react-query
+```
+
+In this step, if there are any errors, you might need to downgrade your react version to 17.0.2. To do this go to your `package.json` file and on the dependencies change react and react-dom value to `"17.0.2"`
+
+[jest](https://jestjs.io/docs/getting-started)
+
+```shell
+npm install --save-dev jest
+```
+
+After the installation is complete:
+
+- Run `npm run dev` to start the development server
+- Visit  `http://localhost:3000` to view the application
+- Start coding! :)
+
+
+
+## Dockerfile setup
+
+```shell
+FROM node:16-alpine AS deps
+```
+
+Installs dependencies only when needed.
+
+```shell
+RUN apk add --no-cache libc6-compat
+```
+
+To add the missing shared libraries to your image, adding the libc6-compat package in your Dockerfile is recommended.
+
+```shell
+WORKDIR /app
+```
+
+Set the working directory to /app
+
+```shell
+COPY package.json package-lock.json ./ 
+```
+
+Copies the `package.json` and `package-lock.json`.
+
+```shell
+RUN npm ci
+```
+
+Installs all the exact version dependencies or devDependencies from a `package-lock.json` file
+
+```shell
+FROM node:16-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+```
+
+Rebuilds the source code only when needed
+
+```shell
+RUN npm run build
+```
+
+Creates a build directory with a production build of your app
+
+```shell
+FROM node:16-alpine AS runner
+WORKDIR /app
+```
+
+Production image, copy all the files and run next
+
+```shell
+ENV NODE_ENV production
+```
+
+Specifies the environment in which the application is running (usually, development or production)
+
+```shell
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+```
+
+Creates a group and an user
+
+```shell
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+```
+
+Copies the app public folder and `package.json` file
+
+```shell
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+```
+
+Automatically leverage output traces to reduce image size
+
+```shell
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+Sets up the USER and EXPOSE variables.
+
+```shell
+CMD ["node", "server.js"]
+```
+
+Runs your app using `node server.js`.
+
+
+## Heroku deploy
+
+Since we already have a docker image, we can use it to deploy our app on heroku.
+
+Log in to Container Registry
+```shell
+heroku container:login
+```
+
+Navigate to the app’s directory and create a Heroku app:
+```shell
+heroku create
+```
+
+Build the image and push to Container Registry:
+```shell
+heroku container:push web
+```
+
+Then release the image to your app:
+```shell
+heroku container:release web
+```
+
+Now open the app in your browser:
+```shell
+heroku open
+```

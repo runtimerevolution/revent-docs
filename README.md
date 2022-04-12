@@ -3,3 +3,17 @@
 Docs to document the creation of the app and api for the Runtime Revolution revent.
 
 Here you can find an api folder with documentation to *How we created the app*.
+
+How did i create this docs page?
+
+  1. Create repository
+  
+  2. yarn add next nextra react react-dom nextra-theme-docs
+  
+  3. Start creating your next.config.js file and configure it
+
+  4. Create your theme config file and configure it
+
+  5. Create your pages folder with _app.js configured file and an index.mdx
+
+  6. Run yarn install and yarn next
