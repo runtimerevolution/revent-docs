@@ -1,0 +1,342 @@
+# Welcome to the revent-api creation!
+
+This docs will help you start your own python project with pyenv, poetry, docker and deploying this to heroku just like we did the first time.
+
+Tools we are gonna use:
+
+- [Pyenv](https://github.com/pyenv/pyenv) - To manage and set your python version
+
+- [Poetry](https://python-poetry.org/docs/#installation) - To manage packages, dependency management
+
+- [Direnv](https://direnv.net/docs/installation.html) - To manage our virtual environment automatically
+
+- [Docker](https://docs.docker.com/get-docker/) - To create an image of your local setup and be able to run this anywhere
+
+In order to be more practical, the individual installation of each tool and integration with the environment will have to be done by you via the links above.
+
+Now that we have all the tools installed, let's follow the steps:
+
+  1. Create your repository
+
+  2. Clone the repository to your local workplace (we should have a .gitignore file and a README.md file)
+
+  3. Install your python version using the terminal:
+
+      ```bash
+      pyenv install <version>
+      ```
+
+  4. Move to the project folder and create your first file (that dictates which version of python to use) by running:
+
+        ```bash
+        pyenv local <version>
+        ```
+
+      We have a new file now (.python-version) that will tell the version needed to run the app.
+
+  5. Now we need to setup poetry so we can install packages, run:
+
+        ```bash
+        poetry init
+        ```
+
+      We can just *press Enter all the way* and configure things later.  
+      Now we have a new file(pyproject.toml) which will tell us what the app's dependencies are (for now just python).
+
+  6. Poetry also has a great feature, he creates a new virtual environment (if you don't have one) that we are gonna ignore for now:  
+    Start by installing the current dependencies:
+
+      ```bash
+      poetry install
+      ```
+
+      Your current project now has a new file called poetry.lock with the installed dependencies and respective versions.
+
+      But we don't wanna have to activate this virtual environment everytime we come to work in the project, instead we are gonna use direnv!
+
+  7. Since you already have direnv installed and hooked into your shell, start by creating a .envrc file with the following:
+
+      ```bash
+      layout pyenv <version>
+      ```
+
+      Just change the "version" to your python version. Everytime you change .envrc file you will have to allow this change with **`direnv allow`**
+
+      Through the terminal, leave the project folder and come back in to see your new virtual environment.
+
+  8. To set your interpreter to use this new path, run:
+
+        ```bash
+        poetry env info --path
+        ```
+
+      Copy this path, add in the end of it /bin/python and if your are using vscode, go to settings and search for python interpreter.
+      Now select to use a specific path and use the one you just copy. Press Enter and you'r done! Now vscode will use this one.
+
+  9. Add .envrc and .direnv to your .gitignore file
+
+  10. Install the packages:
+
+        ```bash
+        poetry add Django
+        ```
+
+        ```bash
+        poetry add strawberry-graphql
+        ```
+
+        ```bash
+        poetry add isort
+        ```
+
+        ```bash
+        poetry add gunicorn
+        ```
+
+        ```bash
+        poetry add django-environ
+        ```
+
+      And so on... notice that the last package we installed is one that will allow us to use .env files to hide our secrets!
+
+  11. Create the django app:
+
+      ```bash
+      django-admin startproject <name_of_project> .
+      ```
+
+      You shuld now have a folder with the name you choosed and a manage.py at the same level of other configuration files we created so far.
+
+  12. Create your .env file and place your SECRET_KEY from project settings in there using [django-environ](https://django-environ.readthedocs.io/en/latest/)
+
+      - On settings.py:
+
+        ```python
+        import environ
+        import os
+        env = environ.Env()
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+        SECRET_KEY = env('SECRET_KEY')
+        ```
+
+      - On your .env file you just save the same value you had on settings:
+
+        - Example:
+
+            ```python
+            SECRET_KEY='django-insecure-+*(rklewjnr(klwnr0a70=ju^z)6$nujmo213po12341'
+            ```
+
+      - add .env to your .gitignore file
+
+  13. Start your django app
+
+      ```bash
+      python manage.py startapp <name_of_app>
+      ```
+
+  14. Create a view on your app that looks like this:
+
+      - The import:
+
+        ```python
+        from django.http import HttpResponse
+        ```
+
+      - The method:
+
+        ```python
+        def hello(request):
+          return HttpResponse("Hello Runtime")
+        ```
+
+  15. On your project folder, go to urls.py and add this:
+
+        - Import:
+
+          ```python
+          from <appname> import views
+          ```
+
+        - On urlpatterns add: `path('', views.hello, name='hello')`
+
+  16. Now we can run the app and see a "Hello Runtime" already!
+
+        - On settings.py add `'*'` to your allowed hosts.
+
+        - Run:
+
+            ```bash
+            python manage.py runserver
+            ```
+
+        - Go to your browser and check the link provided by the command above.
+
+  17. Create a file called Makefile and add this command plus future commands there. Check example [here](https://makefiletutorial.com/).
+
+  18. To build a docker image of your current project, start by creating a file called 'Dockerfile' and one '.dockerignore'
+
+        - For Dockerfile we are using this configuration:
+
+          ```Dockerfile
+          # syntax=docker/dockerfile:1
+          FROM python:3
+
+          ARG DJANGO_ENV
+
+          ENV DJANGO_ENV=${DJANGO_ENV} \
+            # python:
+            PYTHONFAULTHANDLER=1 \
+            PYTHONUNBUFFERED=1 \
+            PYTHONHASHSEED=random \
+            # pip:
+            PIP_NO_CACHE_DIR=off \
+            PIP_DISABLE_PIP_VERSION_CHECK=on \
+            PIP_DEFAULT_TIMEOUT=100 \
+            # poetry:
+            POETRY_VERSION=1.1.13 \
+            POETRY_VIRTUALENVS_CREATE=false \
+            POETRY_CACHE_DIR='/var/cache/pypoetry'
+
+          # System deps:
+          RUN apt-get update \
+            && apt-get install --no-install-recommends -y \
+              bash \
+              build-essential \
+              curl \
+              gettext \
+              git \
+              libpq-dev \
+              wget \
+            # Cleaning cache:
+            && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* \
+            && pip install "poetry==$POETRY_VERSION" && poetry --version
+
+          # set work directory
+          WORKDIR /code
+
+          # Copy only requirements to cache them in docker layer
+          COPY poetry.lock pyproject.toml /code/
+
+          # Install dependencies:
+          RUN poetry install
+
+          # Creating folders, and files for a project:
+          COPY . /code
+
+          # run gunicorn
+          CMD gunicorn <project_name>.wsgi:application --bind 0.0.0.0:8000
+          ```
+
+        - For our .dockerignore file we use this one:
+
+          ```.dockerignore
+          *.md
+          .direnv
+          .envrc
+          .gitignore
+
+          db.sqlite3
+          ```
+
+        - Just for us to see something on the browser we will also create a file called docker-compose.yml with the following:
+
+          ```docker-compose
+          version: '3.9'
+
+          services:
+            web:
+              build: .
+              command: python manage.py runserver 0.0.0.0:8000
+              ports:
+                - 8000:8000
+          ```
+
+        - Build the image running the docker build command:
+
+          ```bash
+          docker build -t project:latest .
+          ```
+
+        - Once this finishes run the docker-compose to open your web service:
+
+          ```bash
+          docker-compose up
+          ```
+
+  19. Now that u seen your application running through docker let's deploy our app to heroku. Start by:
+
+      1. Comment out docker-compose file and prepare our deploy for heroku creating a file heroku.yml with:
+
+          ```heroku.yml
+          build:
+            docker:
+              web: Dockerfile
+          run:
+            web: gunicorn <project_name>.wsgi:application --bind 0.0.0.0:$PORT
+          ```
+
+      2. Change the gunicorn command on dockerfile to this:
+
+          ```dockerfile
+          CMD gunicorn <project_name>.wsgi:application --bind 0.0.0.0:$PORT
+          ```
+
+      3. Add .env to .dockerignore because we can't send this environment variables to remote.
+
+      4. On settings.py change DEBUG to False.
+
+  20. Everything is ready, create an account on heroku and install [Heroku-CLI](https://devcenter.heroku.com/articles/heroku-cli).
+
+  21. Now that we got Heroku installed, follow the next commands:
+
+      1. heroku login into your account
+
+          ```bash
+          heroku login
+          ```
+
+      2. heroku create app (you will get a random name like limitless-atoll-51647)
+
+          ```bash
+          heroku create
+          ```
+
+      3. Add the SECRET_KEY environment variable to your app:
+
+          ```bash
+          heroku config:set SECRET_KEY=SOME_SECRET_VALUE -a <randomAppName>
+          ```
+
+      4. In your settings.py change the allowed hosts from `'*'` to:
+
+          `'localhost', '127.0.0.1', '<randomAppName>.herokuapp.com'`
+
+      5. Set your app to be a cointainer:
+
+          ```bash
+          heroku stack:set container -a <randomAppName>
+          ```
+
+      6. Make your current git branch link to remote heroku
+
+          ```bash
+          heroku git:remote -a <randomAppName>
+          ```
+
+      7. Just push it! Note: You have to make your commit first if u havent done so.
+
+          ```bash
+          git add .
+          ```
+
+          ```bash
+          git commit -am "Our first deploy"
+          ```
+
+          ```bash
+          git push heroku <ourBranchName>:main
+          ```
+
+  22. Alright now you have your project setup done, we did build an image for docker and deploy on heroku! Go start coding and have fun :)
