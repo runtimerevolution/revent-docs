@@ -6,7 +6,6 @@ const withNextra = require('nextra')({
 })
 let nextraConfig = withNextra()
 nextraConfig.assetPrefix = './'
-console.log(process.env.ENV);
 if (process.env.ENV === 'production') {
   nextraConfig.basePath = '/revent-docs'
 }
