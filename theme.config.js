@@ -1,6 +1,6 @@
 export default {
-  projectLink: 'https://github.com/runtimerevolution/revent-docs/',
-  docsRepositoryBase: 'https://github.com/runtimerevolution/revent-docs',
+  github: 'https://github.com/runtimerevolution/revent-docs',
+  docsRepositoryBase: 'https://github.com/runtimerevolution/revent-docs', // "Edit this pages"
   titleSuffix: " - Revent Docs",
   nextLinks: true,
   prevLinks: true,
